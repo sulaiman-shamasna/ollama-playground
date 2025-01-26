@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 
 from langchain_community.document_loaders import SeleniumURLLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -7,6 +8,8 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama.llms import OllamaLLM
 
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
+
 template = """
 You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
 Question: {question} 
@@ -14,10 +17,10 @@ Context: {context}
 Answer:
 """
 
-embeddings = OllamaEmbeddings(model="llama3.2")
+embeddings = OllamaEmbeddings(model="llama3.2", server_url=OLLAMA_URL)
 vector_store = InMemoryVectorStore(embeddings)
 
-model = OllamaLLM(model="llama3.2")
+model = OllamaLLM(model="llama3.2", server_url=OLLAMA_URL)
 
 def load_page(url):
     loader = SeleniumURLLoader(
@@ -51,10 +54,10 @@ def answer_question(question, context):
 st.title("AI Crawler")
 url = st.text_input("Enter URL:")
 
-documents = load_page(url)
-chunked_documents = split_text(documents)
-
-index_docs(chunked_documents)
+if url:
+    documents = load_page(url)
+    chunked_documents = split_text(documents)
+    index_docs(chunked_documents)
 
 question = st.chat_input()
 
@@ -64,6 +67,3 @@ if question:
     context = "\n\n".join([doc.page_content for doc in retrieve_documents])
     answer = answer_question(question, context)
     st.chat_message("assistant").write(answer)
-
-
-
